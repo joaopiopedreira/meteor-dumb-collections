@@ -1,3 +1,20 @@
+var updFunc = function(collection,name) {
+	return function(/*arguments*/){
+		"use strict";
+		var args, docId, newDocument;
+
+		args = _.toArray(arguments);
+		docId = args[0];
+		collection._update.apply(collection,args);
+		newDocument = collection.findOne(docId);
+		collection.remove(docId);
+		newDocument._id = collection._makeNewID();
+		collection.insert(newDocument);
+		console.log('DumbCollection ' + name + ' updated. Old documentId: ' + docId + '; new documentId: ' + newDocument._id);
+	}
+};
+
+
 if (Meteor.isServer) {
 
 	var collections = {};
@@ -7,12 +24,10 @@ if (Meteor.isServer) {
 		var newCollection = new Mongo.Collection(name, options),
 			_this = this;
 
-		newCollection._update = newCollection.update;
-		newCollection.update = function() {
-			throw new Meteor.Error(500, "Please do not use update on a Dumb Collection on the server - remove and reinsert docs instead.");
-		}
-
 		collections[name] = newCollection;
+
+		newCollection._update = newCollection.update;
+		newCollection.update = updFunc(newCollection,name);
 
 		return newCollection;
 
@@ -71,6 +86,10 @@ if (Meteor.isServer) {
 		coll._readyFlag.set(true);
 		console.log("Dumb Collection " + name + " seeded with " + existingDocs.length.toString() + " docs from local storage.");
 
+		coll._update = coll.update;
+		coll.update = function() {
+			throw new Meteor.Error(500, "Please do not use update on a Dumb Collection on the client - remove and reinsert docs instead.");
+		};
 
 		coll.sync = function(options) {
 
@@ -103,6 +122,7 @@ if (Meteor.isServer) {
 
 					if (!options.retain) {
 						Meteor.call('dumbCollectionGetRemoved', currentIds, coll.name, options.query, function(err, res) {
+							if(err) throw new Meteor.Error(500,'problems invoking dumbCollectionGetRemoved on the server');
 							Models.removeBulk(coll, res);
 							results.removed = res;
 							jobsComplete.remove = true;
@@ -113,6 +133,7 @@ if (Meteor.isServer) {
 
 					if (!options.reject) {
 						Meteor.call('dumbCollectionGetNew', currentIds, coll.name, options.query, options.options, function(err, res) {
+							if(err) throw new Meteor.Error(500,'problems invoking dumbCollectionGetNew on the server');
 							results.inserted = res;
 							Models.insertBulk(coll, res);
 							jobsComplete.insert = true;
