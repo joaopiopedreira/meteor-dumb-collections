@@ -10,6 +10,15 @@ var updFunc = function(collection,name) {
 		collection.remove(docId);
 		newDocument._id = collection._makeNewID();
 		collection.insert(newDocument);
+		if(name === 'dumbLists'){
+			var todos = DumbTodos.find({listId:docId}).fetch();
+			DumbTodos.remove({listId:docId});
+			todos.forEach(function(it){
+				it._id = Ramdom.id();
+				it.listId = newDocument._id;
+				DumbTodos.insert(it);
+			});
+		}
 		console.log('DumbCollection ' + name + ' updated. Old documentId: ' + docId + '; new documentId: ' + newDocument._id);
 	}
 };
