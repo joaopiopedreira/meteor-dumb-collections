@@ -88,8 +88,7 @@ if (Meteor.isServer) {
 		var coll = new Mongo.Collection(null, options);
 
 		// Use @raix MiniMax
-		var existingDocs = MiniMax.maxify(amplify.store('dumbCollection_' + name) || []);
-		//var existingDocs = amplify.store('dumbCollection_' + name) || [];
+		var existingDocs = amplify.store('dumbCollection_' + name) || [];
 
 		coll.name = name;
 		coll.syncing = false;
@@ -174,7 +173,7 @@ if (Meteor.isServer) {
 							try {
 								// Use @raix MiniMax
 								//console.log(MiniMax.minify(syncedCollection));
-								amplify.store('dumbCollection_' + coll.name, MiniMax.minify(syncedCollection));
+								amplify.store('dumbCollection_' + coll.name, syncedCollection);
 								//amplify.store('dumbCollection_' + coll.name, syncedCollection);
 							}
 							catch (e) {
