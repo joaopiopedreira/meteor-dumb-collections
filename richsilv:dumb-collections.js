@@ -46,6 +46,9 @@ if (Meteor.isServer) {
 
 		dumbCollectionGetNew: function(existing, name, query, options) {
 
+			this.unblock();
+
+			//return MiniMax.minify(collections[name].find(_.extend(query || {}, {
 			return collections[name].find(_.extend(query || {}, {
 				_id: {
 					$nin: existing
@@ -84,7 +87,9 @@ if (Meteor.isServer) {
 
 		var coll = new Mongo.Collection(null, options);
 
-		var existingDocs = amplify.store('dumbCollection_' + name) || [];
+		// Use @raix MiniMax
+		var existingDocs = MiniMax.maxify(amplify.store('dumbCollection_' + name) || []);
+		//var existingDocs = amplify.store('dumbCollection_' + name) || [];
 
 		coll.name = name;
 		coll.syncing = false;
@@ -143,6 +148,8 @@ if (Meteor.isServer) {
 					if (!options.reject) {
 						Meteor.call('dumbCollectionGetNew', currentIds, coll.name, options.query, options.options, function(err, res) {
 							if(err) throw new Meteor.Error(500,'problems invoking dumbCollectionGetNew on the server');
+							//res = MiniMax.maxify(res);
+							console.log(res);
 							results.inserted = res;
 							Models.insertBulk(coll, res);
 							jobsComplete.insert = true;
@@ -162,9 +169,13 @@ if (Meteor.isServer) {
 							coll._syncFlag.set(true);
 							coll.syncing = false;
 
+							// Use @raix MiniMax
 							var syncedCollection = coll.find().fetch();
 							try {
-								amplify.store('dumbCollection_' + coll.name, syncedCollection);
+								// Use @raix MiniMax
+								//console.log(MiniMax.minify(syncedCollection));
+								amplify.store('dumbCollection_' + coll.name, MiniMax.minify(syncedCollection));
+								//amplify.store('dumbCollection_' + coll.name, syncedCollection);
 							}
 							catch (e) {
 								console.log("Collection cannot be stored in Local Storage.");
