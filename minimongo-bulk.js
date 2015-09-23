@@ -16,31 +16,29 @@ DumbModels = {};
 DumbModels.updateBulk = function(collection, documents){
     var updQuery = {},oldDocument = {}, prop, companies = [];
 
-    if(collection) {
-        var last = _.last(documents);
+    //console.log('in DumbModels.updateBulk. Collection: ' + collection.name + ', documents: ' + JSON.stringify(documents));
+
+    if(collection && documents.length > 0) {
         documents.forEach(function(item,i){
             if(_.isObject(item)) {
                 oldDocument = collection.findOne(item._id);
-                for(prop in oldDocument){
-                    updQuery.$set = {};
-                    if(item.hasOwnProperty(prop)){
-                        if(!_.isEqual(oldDocument[prop],item[prop]) && prop !== '__dumbVersion') {
-                            console.log('in DumbModels.updateBulk. prop: ' + prop + ', doc._id: ' + item._id);
-                            updQuery.$set[prop] = item[prop];
+                updQuery.$set = {};
+                if(oldDocument){
+                    for(prop in item){
+                        if(item.hasOwnProperty(prop)){
+                            if(!_.isEqual(oldDocument[prop],item[prop])) {
+                                console.log('in DumbModels.updateBulk. prop: ' + prop + ', doc._id: ' + item._id);
+                                updQuery.$set[prop] = item[prop];
+                            }
                         }
                     }
                 }
 
-                if(!_.isEmpty(updQuery.$set))
+                if(!_.isEmpty(updQuery.$set)){
+                    console.log('now updating with updQuery: ' + JSON.stringify(updQuery));
                     collection.direct.update(item._id,updQuery);
-
-                if(i === documents.length - 1 && documents.length > 0){
-                    companies = _.chain(documents).map(function(it){return it.companyId}).uniq().value();
-                    companies.forEach(function(it){
-                        console.log('would call updStaticDocs with docs: ' + JSON.stringify(documents));
-                        //Meteor.call('updStaticDocs',it);
-                    });
                 }
+
             }
         });
     }

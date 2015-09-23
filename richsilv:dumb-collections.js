@@ -16,13 +16,15 @@ if (Meteor.isServer) {
 
 	Meteor.methods({
 
-		dumbCollectionGetUpdated: function(updatedDocIds, name, query, options) {
+		dumbCollectionGetUpdated: function(existing, name, query, options) {
 
 			this.unblock();
 
+			console.log('in dumbCollectionGetUpdated server. Collection: ' + name + ', existing: ' + JSON.stringify(existing));
+
 			return collections[name].find(_.extend(query || {}, {
 				__dumbVersion: {
-					$in: updatedDocIds
+					$nin: existing
 				}
 			}), options || {}).fetch();
 
@@ -70,18 +72,22 @@ if (Meteor.isServer) {
 	DumbCollection = function(name, options) {
 
 		var coll = new Mongo.Collection(null, options);
-
-		// Use @raix MiniMax
-		var existingDocs = amplify.store('dumbCollection_' + name) || [];
+		var existingDocs;
 
 		coll.name = name;
 		coll.syncing = false;
 		coll._readyFlag = new ReactiveVar(false);
 		coll._syncFlag = new ReactiveVar(false);
 
-		DumbModels.insertBulk(coll, existingDocs);
-		coll._readyFlag.set(true);
-		console.log("Dumb Collection " + name + " seeded with " + existingDocs.length.toString() + " docs from local storage.");
+		//var existingDocs = amplify.store('dumbCollection_' + name) || [];
+		localforage.getItem('dumbCollection_' + name).then(function(err, value) {
+			existingDocs = value || [];
+
+			DumbModels.insertBulk(coll, existingDocs);
+			coll._readyFlag.set(true);
+			console.log("Dumb Collection " + name + " seeded with " + existingDocs.length.toString() + " docs from local storage.");
+		});
+
 
 		coll.sync = function(options) {
 
@@ -148,7 +154,7 @@ if (Meteor.isServer) {
 
 					Meteor.call('dumbCollectionGetUpdated', currentDumbVersionIds, coll.name, options.query, options.options, function(err, res) {
 						if(err) throw new Meteor.Error(500,'problems invoking dumbCollectionGetUpdated on the server');
-						//res = MiniMax.maxify(res);
+						res = res || [];
 						results.updated = res;
 						DumbModels.updateBulk(coll, res);
 						jobsComplete.update = true;
@@ -170,13 +176,13 @@ if (Meteor.isServer) {
 							// Use @raix MiniMax
 							var syncedCollection = coll.find().fetch();
 							try {
-								// Use @raix MiniMax
-								//console.log(MiniMax.minify(syncedCollection));
-								amplify.store('dumbCollection_' + coll.name, syncedCollection);
 								//amplify.store('dumbCollection_' + coll.name, syncedCollection);
-							}
+								localforage.setItem('dumbCollection_' + coll.name, syncedCollection).then(function(err, value) {
+									if(value)
+										console.log('Stored ' + value.length + ' items of ' + coll.name + 'in localforage');
+								});							}
 							catch (e) {
-								console.log("Collection cannot be stored in Local Storage." + JSON.stringify(e));
+								console.log("Collection cannot be stored in localforage." + JSON.stringify(e));
 								options.failCallback && options.failCallback.call(coll, e);
 							}
 							finally {
@@ -196,7 +202,12 @@ if (Meteor.isServer) {
 		coll.clear = function(reactive) {
 
 			DumbModels.removeAll(coll);
-			amplify.store('dumbCollection_' + coll.name, []);
+
+			//amplify.store('dumbCollection_' + coll.name, []);
+			localforage.setItem('dumbCollection_' + coll.name, []).then(function(err, value) {
+				console.log('Cleared all items of ' + coll.name + ' from localforage');
+			});
+
 			if (reactive) {
 				coll._syncFlag.set(false);
 			} else {
