@@ -1,28 +1,3 @@
-var updFunc = function(collection,name) {
-	return function(/*arguments*/){
-		"use strict";
-		var args, docId, newDocument;
-
-		args = _.toArray(arguments);
-		docId = args[0];
-		collection._update.apply(collection,args);
-		newDocument = collection.findOne(docId);
-		collection.remove(docId);
-		newDocument._id = collection._makeNewID();
-		collection.insert(newDocument);
-		if(name === 'dumbLists'){
-			var todos = DumbTodos.find({listId:docId}).fetch();
-			DumbTodos.remove({listId:docId});
-			todos.forEach(function(it){
-				it._id = Ramdom.id();
-				it.listId = newDocument._id;
-				DumbTodos.insert(it);
-			});
-		}
-		console.log('DumbCollection ' + name + ' updated. Old documentId: ' + docId + '; new documentId: ' + newDocument._id);
-	}
-};
-
 
 if (Meteor.isServer) {
 
@@ -35,14 +10,23 @@ if (Meteor.isServer) {
 
 		collections[name] = newCollection;
 
-		newCollection._update = newCollection.update;
-		newCollection.update = updFunc(newCollection,name);
-
 		return newCollection;
 
-	}
+	};
 
 	Meteor.methods({
+
+		dumbCollectionGetUpdated: function(updatedDocIds, name, query, options) {
+
+			this.unblock();
+
+			return collections[name].find(_.extend(query || {}, {
+				__dumbVersion: {
+					$in: updatedDocIds
+				}
+			}), options || {}).fetch();
+
+		},
 
 		dumbCollectionGetNew: function(existing, name, query, options) {
 
@@ -59,6 +43,8 @@ if (Meteor.isServer) {
 
 		dumbCollectionGetRemoved: function(existing, name, query) {
 
+			this.unblock();
+
 			var currentIds = {};
 
 			collections[name].find(query || {}, {
@@ -68,8 +54,6 @@ if (Meteor.isServer) {
 			}).forEach(function(doc) {
 				currentIds[doc._id] = true;
 			});
-
-			this.unblock();
 
 			var missingIds = existing.filter(function(docId){
 			    return !(docId in currentIds);
@@ -95,14 +79,9 @@ if (Meteor.isServer) {
 		coll._readyFlag = new ReactiveVar(false);
 		coll._syncFlag = new ReactiveVar(false);
 
-		Models.insertBulk(coll, existingDocs);
+		DumbModels.insertBulk(coll, existingDocs);
 		coll._readyFlag.set(true);
 		console.log("Dumb Collection " + name + " seeded with " + existingDocs.length.toString() + " docs from local storage.");
-
-		coll._update = coll.update;
-		coll.update = function() {
-			throw new Meteor.Error(500, "Please do not use update on a Dumb Collection on the client - remove and reinsert docs instead.");
-		};
 
 		coll.sync = function(options) {
 
@@ -112,11 +91,13 @@ if (Meteor.isServer) {
 
 			var jobsComplete = {
 					remove: options.retain,
-					insert: options.reject
+					insert: options.reject,
+					update:false
 				},
 				completionDep = new Deps.Dependency(),
 				results = {},
-				currentIds = [];
+				currentIds = [],
+				currentDumbVersionIds = [];
 
 			coll._syncFlag.set(false);
 
@@ -133,10 +114,19 @@ if (Meteor.isServer) {
 						}
 					}).fetch(), '_id');
 
+					currentDumbVersionIds = _.uniq(_.pluck(coll.find({}, {
+						reactive: false,
+						fields: {
+							__dumbVersion: 1
+						}
+					}).fetch(), '__dumbVersion'));
+
+					console.log('currentDumbVersionIds: ' + JSON.stringify(currentDumbVersionIds));
+
 					if (!options.retain) {
 						Meteor.call('dumbCollectionGetRemoved', currentIds, coll.name, options.query, function(err, res) {
 							if(err) throw new Meteor.Error(500,'problems invoking dumbCollectionGetRemoved on the server');
-							Models.removeBulk(coll, res);
+							DumbModels.removeBulk(coll, res);
 							results.removed = res;
 							jobsComplete.remove = true;
 							completionDep.changed();
@@ -148,22 +138,31 @@ if (Meteor.isServer) {
 						Meteor.call('dumbCollectionGetNew', currentIds, coll.name, options.query, options.options, function(err, res) {
 							if(err) throw new Meteor.Error(500,'problems invoking dumbCollectionGetNew on the server');
 							//res = MiniMax.maxify(res);
-							console.log(res);
 							results.inserted = res;
-							Models.insertBulk(coll, res);
+							DumbModels.insertBulk(coll, res);
 							jobsComplete.insert = true;
 							completionDep.changed();
 							options.insertionCallback && options.insertionCallback.call(coll, res);
 						});
 					} else jobsComplete.insert = true;
 
+					Meteor.call('dumbCollectionGetUpdated', currentDumbVersionIds, coll.name, options.query, options.options, function(err, res) {
+						if(err) throw new Meteor.Error(500,'problems invoking dumbCollectionGetUpdated on the server');
+						//res = MiniMax.maxify(res);
+						results.updated = res;
+						DumbModels.updateBulk(coll, res);
+						jobsComplete.update = true;
+						completionDep.changed();
+						options.updateCallback && options.updateCallback.call(coll, res);
+					});
+
 					Tracker.autorun(function(innerComp) {
 
 						completionDep.depend();
 
-						if (jobsComplete.remove && jobsComplete.insert) {
+						if (jobsComplete.remove && jobsComplete.insert && jobsComplete.update) {
 
-							innerComp.stop()
+							innerComp.stop();
 							outerComp.stop();
 							coll._syncFlag.set(true);
 							coll.syncing = false;
@@ -177,7 +176,7 @@ if (Meteor.isServer) {
 								//amplify.store('dumbCollection_' + coll.name, syncedCollection);
 							}
 							catch (e) {
-								console.log("Collection cannot be stored in Local Storage.");
+								console.log("Collection cannot be stored in Local Storage." + JSON.stringify(e));
 								options.failCallback && options.failCallback.call(coll, e);
 							}
 							finally {
@@ -196,7 +195,7 @@ if (Meteor.isServer) {
 
 		coll.clear = function(reactive) {
 
-			Models.removeAll(coll);
+			DumbModels.removeAll(coll);
 			amplify.store('dumbCollection_' + coll.name, []);
 			if (reactive) {
 				coll._syncFlag.set(false);

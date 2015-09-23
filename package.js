@@ -33,7 +33,7 @@ Package.on_use(function (api) {
    * Example:
    *  api.export('GlobalSymbol');
    */
-  api.export('DumbCollection');
+  api.export(['DumbCollection','DumbModels']);
 });
 
 Package.on_test(function (api) {
