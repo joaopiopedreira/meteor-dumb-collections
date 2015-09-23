@@ -80,7 +80,7 @@ if (Meteor.isServer) {
 		coll._syncFlag = new ReactiveVar(false);
 
 		//var existingDocs = amplify.store('dumbCollection_' + name) || [];
-		localforage.getItem('dumbCollection_' + name).then(function(err, value) {
+		localforage.getItem('dumbCollection_' + name).then(function(value) {
 			existingDocs = value || [];
 
 			DumbModels.insertBulk(coll, existingDocs);
