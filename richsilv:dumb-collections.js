@@ -3,6 +3,17 @@ if (Meteor.isServer) {
 
 	var collections = {};
 
+	var transform = function(doc){
+		var prop;
+		for(prop in doc){
+			if(doc.hasOwnProperty(prop) && _.contains(compressedFields,prop)){
+				doc[prop] = LZString.compress(doc[prop]);
+			}
+		}
+		return doc;
+	};
+
+
 	DumbCollection = function(name, options) {
 
 		var newCollection = new Mongo.Collection(name, options),
@@ -20,13 +31,11 @@ if (Meteor.isServer) {
 
 			this.unblock();
 
-			console.log('in dumbCollectionGetUpdated server. Collection: ' + name + ', existing: ' + JSON.stringify(existing));
-
 			return collections[name].find(_.extend(query || {}, {
 				__dumbVersion: {
 					$nin: existing
 				}
-			}), options || {}).fetch();
+			}), {transform:transform} || {}).fetch();
 
 		},
 
@@ -34,12 +43,13 @@ if (Meteor.isServer) {
 
 			this.unblock();
 
-			//return MiniMax.minify(collections[name].find(_.extend(query || {}, {
-			return collections[name].find(_.extend(query || {}, {
+			var docs = collections[name].find(_.extend(query || {}, {
 				_id: {
 					$nin: existing
 				}
-			}), options || {}).fetch();
+			}), {transform:transform} || {}).fetch();
+
+			return docs;
 
 		},
 
@@ -82,7 +92,6 @@ if (Meteor.isServer) {
 		//var existingDocs = amplify.store('dumbCollection_' + name) || [];
 		localforage.getItem('dumbCollection_' + name).then(function(value) {
 			existingDocs = value || [];
-
 			DumbModels.insertBulk(coll, existingDocs);
 			coll._readyFlag.set(true);
 			console.log("Dumb Collection " + name + " seeded with " + existingDocs.length.toString() + " docs from local storage.");
@@ -92,6 +101,9 @@ if (Meteor.isServer) {
 		coll.sync = function(options) {
 
 			options = options || {};
+
+			console.log(options);
+			console.log(options.options);
 
 			if (coll.syncing) throw new Meteor.Error('already_syncing', 'Cannot sync whilst already syncing');
 
@@ -145,17 +157,20 @@ if (Meteor.isServer) {
 							if(err) throw new Meteor.Error(500,'problems invoking dumbCollectionGetNew on the server');
 							//res = MiniMax.maxify(res);
 							results.inserted = res;
+							res = DumbModels.decompress(coll,res);
+							console.log();
 							DumbModels.insertBulk(coll, res);
 							jobsComplete.insert = true;
 							completionDep.changed();
 							options.insertionCallback && options.insertionCallback.call(coll, res);
 						});
 					} else jobsComplete.insert = true;
-
+  4
 					Meteor.call('dumbCollectionGetUpdated', currentDumbVersionIds, coll.name, options.query, options.options, function(err, res) {
 						if(err) throw new Meteor.Error(500,'problems invoking dumbCollectionGetUpdated on the server');
 						res = res || [];
 						results.updated = res;
+						res = DumbModels.decompress(coll,res);
 						DumbModels.updateBulk(coll, res);
 						jobsComplete.update = true;
 						completionDep.changed();

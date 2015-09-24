@@ -10,6 +10,31 @@ to cause reactive dependencies to re-run.
  
 DumbModels = {};
 
+/**
+ * Decompress compressed collection fields
+ */
+DumbModels.decompress = function(collection,documents){
+    "use strict";
+    var newDocuments = [], itemUncomp;
+    if(collection) {
+        console.log('decompressing ' + collection.name + '...');
+        _.each(documents, function(item){
+            if(_.isObject(item)) {
+                compressedFields.forEach(function(field){
+                    "use strict";
+                    if(item[field]){
+                        itemUncomp = LZString.decompress(item[field]);
+                        item[field] = itemUncomp || item[field];
+                    }
+                });
+                newDocuments.push(item);
+            }
+        });
+    }
+
+    return documents;
+};
+
 /*
  Updates documents in bulk.
  */
@@ -27,7 +52,6 @@ DumbModels.updateBulk = function(collection, documents){
                     for(prop in item){
                         if(item.hasOwnProperty(prop)){
                             if(!_.isEqual(oldDocument[prop],item[prop])) {
-                                console.log('in DumbModels.updateBulk. prop: ' + prop + ', doc._id: ' + item._id);
                                 updQuery.$set[prop] = item[prop];
                             }
                         }
@@ -35,14 +59,13 @@ DumbModels.updateBulk = function(collection, documents){
                 }
 
                 if(!_.isEmpty(updQuery.$set)){
-                    console.log('now updating with updQuery: ' + JSON.stringify(updQuery));
                     collection.direct.update(item._id,updQuery);
                 }
 
             }
         });
     }
-},
+};
 
     /*
 Inserts documents in bulk.
@@ -53,15 +76,16 @@ DumbModels.insertBulk = function(collection, documents){
         var last = _.last(documents);
         _.each(documents, function(item){
             if(_.isObject(item)) {
-                if (item._id === last._id)
+                if (item._id === last._id){
                     collection.insert(item);
+                }
                 else {
                     collection._collection._docs._map[item._id] = item;
                 }
             }
         });
     }
-},
+};
  
 /*
 Removes documents in bulk.
