@@ -7,8 +7,10 @@ if (Meteor.isServer) {
 		var prop;
 		for(prop in doc){
 			if(doc.hasOwnProperty(prop) && _.contains(compressedFields,prop)){
-				var comp = LZString.compress(doc[prop]);
-				doc[prop] = comp || doc[prop];
+				if(doc[prop]){
+					var comp = LZString.compress(doc[prop]);
+					doc[prop] = comp || doc[prop];
+				}
 			}
 		}
 		return doc;
@@ -36,7 +38,7 @@ if (Meteor.isServer) {
 				__dumbVersion: {
 					$nin: existing
 				}
-			}), {transform:transform} || {}).fetch();
+			}), options /*{transform:transform}*/ || {}).fetch();
 
 		},
 
@@ -48,7 +50,7 @@ if (Meteor.isServer) {
 				_id: {
 					$nin: existing
 				}
-			}), {transform:transform} || {}).fetch();
+			}), options /*{transform:transform}*/ || {}).fetch();
 
 			return docs;
 
@@ -158,10 +160,10 @@ if (Meteor.isServer) {
 							if(err) throw new Meteor.Error(500,'problems invoking dumbCollectionGetNew on the server');
 							//res = MiniMax.maxify(res);
 							results.inserted = res;
-							var resCompressed = JSON.stringify(res).length;
-							res = DumbModels.decompress(coll,res);
-							var resUncompressed = JSON.stringify(res).length;
-							console.log('Compressed: %d, Uncompressed: %d, Compression ratio: %s',resCompressed,resUncompressed, Number(((resUncompressed - resCompressed) / resUncompressed)).toFixed(2));
+							//var resCompressed = JSON.stringify(res).length;
+							//res = DumbModels.decompress(coll,res);
+							//var resUncompressed = JSON.stringify(res).length;
+							//console.log('Compressed: %d, Uncompressed: %d, Compression ratio: %s',resCompressed,resUncompressed, Number(((resUncompressed - resCompressed) / resUncompressed)).toFixed(2));
 							DumbModels.insertBulk(coll, res);
 							jobsComplete.insert = true;
 							completionDep.changed();
@@ -173,7 +175,7 @@ if (Meteor.isServer) {
 						if(err) throw new Meteor.Error(500,'problems invoking dumbCollectionGetUpdated on the server');
 						res = res || [];
 						results.updated = res;
-						res = DumbModels.decompress(coll,res);
+						//res = DumbModels.decompress(coll,res);
 						DumbModels.updateBulk(coll, res);
 						jobsComplete.update = true;
 						completionDep.changed();
