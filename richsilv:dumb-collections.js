@@ -7,7 +7,8 @@ if (Meteor.isServer) {
 		var prop;
 		for(prop in doc){
 			if(doc.hasOwnProperty(prop) && _.contains(compressedFields,prop)){
-				doc[prop] = LZString.compress(doc[prop]);
+				var comp = LZString.compress(doc[prop]);
+				doc[prop] = comp || doc[prop];
 			}
 		}
 		return doc;
@@ -157,8 +158,10 @@ if (Meteor.isServer) {
 							if(err) throw new Meteor.Error(500,'problems invoking dumbCollectionGetNew on the server');
 							//res = MiniMax.maxify(res);
 							results.inserted = res;
+							var resCompressed = JSON.stringify(res).length;
 							res = DumbModels.decompress(coll,res);
-							console.log();
+							var resUncompressed = JSON.stringify(res).length;
+							console.log('Compressed: %d, Uncompressed: %d, Compression ratio: %s',resCompressed,resUncompressed, Number(((resUncompressed - resCompressed) / resUncompressed)).toFixed(2));
 							DumbModels.insertBulk(coll, res);
 							jobsComplete.insert = true;
 							completionDep.changed();
