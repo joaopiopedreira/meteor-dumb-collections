@@ -3,6 +3,13 @@ if (Meteor.isServer) {
 
 	var collections = {};
 
+	/**
+	 * Use this func to compress data on the wire
+	 * Not in use now because the overhead on the client in significant.
+	 * TODO: try this later, now that the spinner on load is not obstrusive.
+	 * @param doc
+	 * @returns {*}
+     */
 	var transform = function(doc){
 		var prop;
 		for(prop in doc){
