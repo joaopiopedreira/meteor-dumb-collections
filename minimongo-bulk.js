@@ -17,7 +17,7 @@ DumbModels.decompress = function(collection,documents){
     "use strict";
     var newDocuments = [], itemUncomp;
     if(collection) {
-        console.log('decompressing ' + collection.name + '...');
+        //console.log('decompressing ' + collection.name + '...');
         _.each(documents, function(item){
             if(_.isObject(item)) {
                 compressedFields.forEach(function(field){
