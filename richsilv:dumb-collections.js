@@ -105,9 +105,6 @@ if (Meteor.isServer) {
 
 			options = options || {};
 
-			console.log(options);
-			console.log(options.options);
-
 			if (coll.syncing) throw new Meteor.Error('already_syncing', 'Cannot sync whilst already syncing');
 
 			var jobsComplete = {
@@ -141,8 +138,6 @@ if (Meteor.isServer) {
 							__dumbVersion: 1
 						}
 					}).fetch(), '__dumbVersion'));
-
-					console.log('currentDumbVersionIds: ' + JSON.stringify(currentDumbVersionIds));
 
 					if (!options.retain) {
 						Meteor.call('dumbCollectionGetRemoved', currentIds, coll.name, options.query, function(err, res) {
