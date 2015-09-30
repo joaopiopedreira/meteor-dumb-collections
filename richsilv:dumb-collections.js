@@ -111,6 +111,7 @@ if (Meteor.isServer) {
 		coll.sync = function(options) {
 
 			options = options || {};
+			options.options = options.options || {};
 
 			if (coll.syncing) throw new Meteor.Error('already_syncing', 'Cannot sync whilst already syncing');
 
