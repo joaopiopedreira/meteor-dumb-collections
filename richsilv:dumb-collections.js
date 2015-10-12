@@ -173,7 +173,7 @@ if (Meteor.isServer) {
 							options.insertionCallback && options.insertionCallback.call(coll, res);
 						});
 					} else jobsComplete.insert = true;
-  4
+
 					Meteor.call('dumbCollectionGetUpdated', currentDumbVersionIds, coll.name, options.query, options.options, function(err, res) {
 						if(err) throw new Meteor.Error(500,'problems invoking dumbCollectionGetUpdated on the server');
 						res = res || [];
@@ -227,7 +227,7 @@ if (Meteor.isServer) {
 			DumbModels.removeAll(coll);
 
 			//amplify.store('dumbCollection_' + coll.name, []);
-			localforage.setItem('dumbCollection_' + coll.name, []).then(function(err, value) {
+			localforage.removeItem('dumbCollection_' + coll.name).then(function(err) {
 				console.log('Cleared all items of ' + coll.name + ' from localforage');
 			});
 
