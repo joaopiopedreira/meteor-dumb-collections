@@ -89,6 +89,10 @@ if (Meteor.isServer) {
 
 } else if (Meteor.isClient) {
 
+	// raix:localforage
+	localforage = new LocalForage();
+
+
 	DumbCollection = function(name, options) {
 
 		var coll = new Mongo.Collection(null, options);

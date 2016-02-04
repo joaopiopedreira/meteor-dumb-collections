@@ -23,6 +23,7 @@ Package.on_use(function (api) {
   api.use('tracker@1.0.3', ['client']);
   api.use('reactive-var@1.0.3', ['client']);
   api.use('ground:minimax@1.1.3',['client']);
+  api.use('raix:localforage@1.2.4-rc.3',['client']);
 
   api.add_files('minimongo-bulk.js', ['client']);
   api.add_files('richsilv:dumb-collections.js', ['client', 'server']);
