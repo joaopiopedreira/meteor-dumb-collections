@@ -100,7 +100,7 @@ if (Meteor.isServer) {
 		coll._syncFlag = new ReactiveVar(false);
 
 		//var existingDocs = amplify.store('dumbCollection_' + name) || [];
-		localForage.getItem('dumbCollection_' + name).then(function(value) {
+		localforage.getItem('dumbCollection_' + name).then(function(value) {
 			existingDocs = value || [];
 			DumbModels.insertBulk(coll, existingDocs);
 			coll._readyFlag.set(true);
@@ -200,7 +200,7 @@ if (Meteor.isServer) {
 							var syncedCollection = coll.find().fetch();
 							try {
 								//amplify.store('dumbCollection_' + coll.name, syncedCollection);
-								localForage.setItem('dumbCollection_' + coll.name, syncedCollection).then(function(err, value) {
+								localforage.setItem('dumbCollection_' + coll.name, syncedCollection).then(function(err, value) {
 									if(value)
 										console.log('Stored ' + value.length + ' items of ' + coll.name + 'in localforage');
 								});							}
@@ -227,7 +227,7 @@ if (Meteor.isServer) {
 			DumbModels.removeAll(coll);
 
 			//amplify.store('dumbCollection_' + coll.name, []);
-			localForage.removeItem('dumbCollection_' + coll.name).then(function(err) {
+			localforage.removeItem('dumbCollection_' + coll.name).then(function(err) {
 				console.log('Cleared all items of ' + coll.name + ' from localforage');
 			});
 
