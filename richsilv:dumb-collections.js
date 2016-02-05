@@ -89,10 +89,6 @@ if (Meteor.isServer) {
 
 } else if (Meteor.isClient) {
 
-	// raix:localforage
-	localforage = new LocalForage();
-
-
 	DumbCollection = function(name, options) {
 
 		var coll = new Mongo.Collection(null, options);
@@ -104,7 +100,7 @@ if (Meteor.isServer) {
 		coll._syncFlag = new ReactiveVar(false);
 
 		//var existingDocs = amplify.store('dumbCollection_' + name) || [];
-		localforage.getItem('dumbCollection_' + name).then(function(value) {
+		localForage.getItem('dumbCollection_' + name).then(function(value) {
 			existingDocs = value || [];
 			DumbModels.insertBulk(coll, existingDocs);
 			coll._readyFlag.set(true);
@@ -204,7 +200,7 @@ if (Meteor.isServer) {
 							var syncedCollection = coll.find().fetch();
 							try {
 								//amplify.store('dumbCollection_' + coll.name, syncedCollection);
-								localforage.setItem('dumbCollection_' + coll.name, syncedCollection).then(function(err, value) {
+								localForage.setItem('dumbCollection_' + coll.name, syncedCollection).then(function(err, value) {
 									if(value)
 										console.log('Stored ' + value.length + ' items of ' + coll.name + 'in localforage');
 								});							}
@@ -231,7 +227,7 @@ if (Meteor.isServer) {
 			DumbModels.removeAll(coll);
 
 			//amplify.store('dumbCollection_' + coll.name, []);
-			localforage.removeItem('dumbCollection_' + coll.name).then(function(err) {
+			localForage.removeItem('dumbCollection_' + coll.name).then(function(err) {
 				console.log('Cleared all items of ' + coll.name + ' from localforage');
 			});
 
