@@ -59,7 +59,7 @@ DumbModels.updateBulk = function(collection, documents){
                 }
 
                 if(!_.isEmpty(updQuery.$set)){
-                    collection.direct.update(item._id,updQuery);
+                    collection.update(item._id,updQuery);
                 }
 
             }
