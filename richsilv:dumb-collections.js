@@ -38,6 +38,7 @@ if (Meteor.isServer) {
 	Meteor.methods({
 
 		dumbCollectionGetUpdated: function(existing, name, query, options) {
+			//check(query,Object);
 
 			this.unblock();
 
