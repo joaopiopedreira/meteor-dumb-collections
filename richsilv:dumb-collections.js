@@ -38,7 +38,10 @@ if (Meteor.isServer) {
 	Meteor.methods({
 
 		dumbCollectionGetUpdated: function(existing, name, query, options) {
-			//check(query,Object);
+			check(existing,Array);
+			check(name,String);
+			check(query,Object);
+			check(options,Match.Optional(Object));
 
 			this.unblock();
 
@@ -51,6 +54,10 @@ if (Meteor.isServer) {
 		},
 
 		dumbCollectionGetNew: function(existing, name, query, options) {
+			check(existing,Array);
+			check(name,String);
+			check(query,Object);
+			check(options,Match.Optional(Object));
 
 			this.unblock();
 
@@ -65,6 +72,9 @@ if (Meteor.isServer) {
 		},
 
 		dumbCollectionGetRemoved: function(existing, name, query) {
+			check(existing,Array);
+			check(name,String);
+			check(query,Object);
 
 			this.unblock();
 
@@ -110,6 +120,10 @@ if (Meteor.isServer) {
 
 
 		coll.sync = function(options) {
+			check(options,Object);
+			check(options['query']['companyId']['$in'],[String]);
+			if(options['query']['driverId'])
+				check(options['query']['driverId']['$in'],Match.OneOf([String],[Number]));
 
 			options = options || {};
 			options.options = options.options || {};
