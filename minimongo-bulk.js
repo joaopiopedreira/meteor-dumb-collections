@@ -43,6 +43,10 @@ DumbModels.updateBulk = function(collection, documents){
 
     //console.log('in DumbModels.updateBulk. Collection: ' + collection.name + ', documents: ' + JSON.stringify(documents));
 
+    if(documents && !_.isArray(documents)){
+        documents = [documents];
+    }
+
     if(collection && documents.length > 0) {
         documents.forEach(function(item,i){
             if(_.isObject(item)) {
@@ -51,9 +55,16 @@ DumbModels.updateBulk = function(collection, documents){
                 if(oldDocument){
                     for(prop in item){
                         if(item.hasOwnProperty(prop)){
-                            if(!_.isEqual(oldDocument[prop],item[prop])) {
-                                updQuery.$set[prop] = item[prop];
+                            if(_.isObject(item[prop])){
+                                if(JSON.stringify(oldDocument[prop]) !== JSON.stringify(item[prop])) {
+                                    updQuery.$set[prop] = item[prop];
+                                }
+                            } else {
+                                if(!_.isEqual(oldDocument[prop],item[prop])) {
+                                    updQuery.$set[prop] = item[prop];
+                                }
                             }
+
                         }
                     }
                 }
